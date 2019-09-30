@@ -56,12 +56,17 @@ class OxygenQueue{
             }
             foreach ($this->list as $key=>$value){
                 if(time()>$value['overTime']){
-                    exec($value['command'],$out);
-                    if($out[0]=='success') {
-                        $this->removeCommand($key);
+                    try {
+                        exec("{$value['command']}", $out);
+                        if (isset($out[0]) && $out[0] == 'success') {
+                            $this->removeCommand($key);
+                        } else {
+                            $this->createErrorLog($out[0] . ' 命令id为:' . $key, '未接收到返回值');
+                        }
+                        unset($out);
                     }
-                    else{
-                        $this->createErrorLog(json_encode($value).' 命令id为:'.$key,'未接收到返回值');
+                    catch (Exception  $e){
+                        $this->createErrorLog($e->getMessage() . ' 命令id为:' . $key, '未知错误');
                     }
                 }
             }
@@ -97,7 +102,8 @@ class OxygenQueue{
     }
     /*生成错误日志信息*/
     private function createErrorLog($errorMsg,$type){
-        $str="[{$type}]类型错误:  ".$errorMsg;
+        $str=file_get_contents($this->fileUrl.'/'.$this->id.'/'.$this->id.'.error');
+        $str=$str."[{$type}]类型错误:  ".$errorMsg."\r\n";
         file_put_contents($this->fileUrl.'/'.$this->id.'/'.$this->id.'.error',$str);
     }
     /*获取配置文件信息*/
